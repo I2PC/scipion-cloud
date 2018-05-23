@@ -1,0 +1,17 @@
+#cloud-config
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock-passwd: true
+    shell: /bin/bash
+    ssh-import-id: ubuntu
+    ssh-authorized-keys:
+      - yourpubkey
+write_files: 
+  - content: |
+        #!/usr/bin/env bash
+        echo yourvncpasswd | /opt/TurboVNC/bin/vncpasswd -f > /home/scipion/.vnc/passwd
+    path: /tmp/setvncpasswd.sh
+    permissions: 0755
+runcmd:
+  - su - scipion /tmp/setvncpasswd.sh
