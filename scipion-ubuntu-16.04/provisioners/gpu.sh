@@ -5,7 +5,7 @@
 wget -P /tmp/scipion-deploy https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
 dpkg -i /tmp/scipion-deploy/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
 apt-get update
-apt-get install -y cuda-8-0
+apt-get install -y cuda-toolkit-8-0
 
 # Install VirtualGL
 
