@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 
-# Install cuda toolkit
-
+# Install cuda
 wget -P /tmp/scipion-deploy https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
 dpkg -i /tmp/scipion-deploy/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
 apt-get update
-apt-get install -y cuda-toolkit-8-0
+apt-get install -y cuda-8-0
+
+# Blackist nouveau driver
+
+echo "blacklist nouveau" > /etc/modprobe.d/nouveau.conf
+
+# Configure nvidia (this gives an error when no GPU is present but it works, this should go on a contextualization script instead)
+
+nvidia-xconfig -a --use-display-device=None --virtual=1920x1200 --preserve-busid
 
 # Install VirtualGL
 
@@ -19,14 +26,6 @@ service lightdm stop
 /opt/VirtualGL/bin/vglserver_config -config
 usermod -a -G vglusers scipion
 service lightdm start
-
-# Blackist nouveau driver
-
-echo "blacklist nouveau" > /etc/modprobe.d/nouveau.conf
-
-# Configure nvidia (this gives an error when no GPU is present but it works, this should go on a contextualization script instead)
-
-nvidia-xconfig -a --use-display-device=None --virtual=1920x1200 --preserve-busid
 
 # Remove debian package
 rm /tmp/scipion-deploy/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
