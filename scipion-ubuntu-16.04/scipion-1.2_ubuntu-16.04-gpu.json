@@ -57,11 +57,11 @@
     },
     {
         "type": "shell",
-        "script": "provisioners/scipion.sh"
+        "script": "provisioners/gpu.sh"
     },
     {
         "type": "shell",
-        "script": "provisioners/gpu.sh"
+        "script": "provisioners/scipion.sh"
     },
     {
         "type": "shell",
