@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # Get scipion binaries
-wget -P /tmp/scipion-deploy http://scipion.cnb.csic.es/downloads/scipion/software/binary/scipion_v1.2_2018-04-02_linux64.tgz
+wget -P /tmp/scipion-deploy http://scipion.cnb.csic.es/downloads/scipion/software/binary/scipion_v1.2.1_2018-10-01_linux64_headers.tgz
 
-tar xfz /tmp/scipion-deploy/scipion_v1.2_2018-04-02_linux64.tgz -C /opt/
+tar xfz /tmp/scipion-deploy/scipion_v1.2.1_2018-10-01_linux64_headers.tgz -C /opt/
 
 # Config scipion
 /opt/scipion/scipion config --notify
@@ -20,15 +20,6 @@ sed -i -e "s+/usr/local/cuda-7.5+/usr/local/cuda+g" /opt/scipion/config/scipion.
 # Install ctffind4 4.1.10
 /opt/scipion/scipion install --no-xmipp ctffind4
 
-# Install motioncor2 1.0.5
-/opt/scipion/scipion install --no-xmipp motioncor2
-
-# Install Gctf 1.06
-/opt/scipion/scipion install --no-xmipp Gctf
-
-# Install Gautomatch 0.53
-/opt/scipion/scipion install --no-xmipp Gautomatch
-
 # Install eman 2.12
 /opt/scipion/scipion install --no-xmipp eman
 
@@ -41,8 +32,19 @@ sed -i -e "s+/usr/local/cuda-7.5+/usr/local/cuda+g" /opt/scipion/config/scipion.
 # Install resmap 1.1.5s2
 /opt/scipion/scipion install --no-xmipp resmap
 
+# Install EM packages GPU dependent (only for GPU image)
+
+# Install Gctf 1.06
+/opt/scipion/scipion install --no-xmipp Gctf
+
+# Install Gautomatch 0.53
+/opt/scipion/scipion install --no-xmipp Gautomatch
+
+# Install motioncor2 1.1.0
+/opt/scipion/scipion install --no-xmipp motioncor2
+
 # Delete scipion binary file
-rm /tmp/scipion-deploy/scipion_v1.2_2018-04-02_linux64.tgz
+rm /tmp/scipion-deploy/scipion_v1.2.1_2018-10-01_linux64_headers.tgz
 
 # Delete em packages tar files
 rm /opt/scipion/software/em/*.tgz

@@ -8,4 +8,4 @@ apt-get install -y libsm6 xterm lightdm xfce4 mesa-utils git python-pip openjdk-
 mkdir /tmp/scipion-deploy
 
 # Add scipion user
-adduser --shell /bin/bash --disabled-password --gecos \"\" scipion
+#adduser --shell /bin/bash --disabled-password --gecos \"\" scipion
