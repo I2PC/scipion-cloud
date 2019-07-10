@@ -2,7 +2,7 @@
   "builders": [{
     "type": "virtualbox-iso",
     "guest_os_type": "Ubuntu_64",
-    "disk_size": 8000,
+    "disk_size": 10000,
     "iso_url": "http://archive.ubuntu.com/ubuntu/dists/xenial-updates/main/installer-amd64/current/images/netboot/mini.iso",
     "iso_checksum": "271a268f92604732d638ec4529e0e843787b3a9407800e14663a47b28a697d96",
     "iso_checksum_type": "sha256",
@@ -31,7 +31,7 @@
       "<enter>"
     ],
     "format": "ova",
-    "vm_name": "Scipion.1.2.1"
+    "vm_name": "Scipion-2.0"
   }],
   "provisioners": [
     {

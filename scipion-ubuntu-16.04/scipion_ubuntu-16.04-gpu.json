@@ -13,7 +13,6 @@
     "http_directory": "httpdir",
     "http_port_min": 8500,
     "http_port_max": 8550,
-    "vboxmanage": [ ["modifyvm", "{{.Name}}", "--memory", "1024"] ],
     "boot_command": [
       "<tab>",
       "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
@@ -32,7 +31,7 @@
       "<enter>"
     ],
     "format": "ova",
-    "vm_name": "Scipion.1.2.1-gpu"
+    "vm_name": "Scipion.2.0-gpu"
   }],
   "provisioners": [
     {
