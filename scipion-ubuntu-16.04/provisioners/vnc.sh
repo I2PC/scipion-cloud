@@ -42,7 +42,8 @@ sed -i -e 's+#no-remote-connections+no-remote-connections+g' /etc/turbovncserver
 
 git clone https://github.com/novnc/noVNC.git /opt/noVNC
 
-pip install websockify
+#pip install websockify
+git clone https://github.com/novnc/websockify /opt/noVNC/utils/websockify
 
 # Add as a service to automatic start
 
@@ -53,7 +54,7 @@ Description=websockify.service
 
 [Service]
 #Type=forking
-ExecStart=/usr/local/bin/websockify 8000 localhost:5901 --web /opt/noVNC
+ExecStart= /opt/noVNC/utils/websockify/run 8000 localhost:5901 --web /opt/noVNC
 Restart=on-failure
 
 [Install]
