@@ -1,4 +1,4 @@
-# How to inject contextualization data to virtual server
+# How to inject contextualization data to virtualbox appliance
 Generate ISO:
 
 `genisoimage -output vbox-config.iso -volid cidata -joliet -r meta-data user-data`
