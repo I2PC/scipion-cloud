@@ -1,0 +1,27 @@
+network public (outbound = 'yes' and outports='5904')
+network privada ()
+
+system node (
+# instance_type = 'standard.large' and
+instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
+net_interface.0.connection = 'public' and
+net_interface.1.connection = 'privada' and
+disk.0.os.name='linux' and
+# Imagen Centos7nvidiadocker
+#disk.0.image.url = 'ost://identity.cloud.muni.cz/8a464baf-0fad-4549-a46d-d938d68dde7e'
+# Imagen Ubuntugpu
+disk.0.image.url = 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601'
+)
+configure node (
+@begin
+- tasks:
+   - name: Pull docker images
+     shell: docker pull registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker-plugin-volume:latest && docker pull #registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker:latest
+   - name: Create plugins volume
+     shell: docker volume create scipion-plugins && docker run --rm --mount #src=scipion-plugins,dst=/volume registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker-plugin-volume:latest
+   - name: Run scipion docker
+     shell: docker run --privileged -d --rm -p 5904:5904 -e USE_DISPLAY="4" -e #ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 --mount src=scipion-plugins,dst=/opt/scipion/software/em #registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker:latest
+@end
+)
+
+deploy node 1

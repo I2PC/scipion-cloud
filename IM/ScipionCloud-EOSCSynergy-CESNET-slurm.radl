@@ -1,0 +1,73 @@
+network publica (outbound = 'yes' and outports='5904')
+network privada ()
+
+system front (
+instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
+#instance_type = 'standard.large' and
+net_interface.1.connection = 'publica' and
+net_interface.0.connection = 'privada' and
+net_interface.0.dns_name = 'scipion-master' and
+disk.0.os.name='linux' and
+disk.0.image.url = 'ost://identity.cloud.muni.cz/e3068d5a-7281-438e-afa3-acaa0db907fc' and
+disk.0.applications contains (name='ansible.modules.grycap.slurm') and
+disk.0.applications contains (name='ansible.modules.indigo-dc.nfs') and
+
+# This lines add an extra 10 GB disk, format it and the mount at /vol-project
+disk.1.size=10GB and
+disk.1.device='vdb' and
+disk.1.fstype='ext4' and
+disk.1.mount_path='/vol-project'
+)
+
+system wn (
+#instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
+instance_type = 'standard.large' and
+net_interface.0.connection = 'privada' and
+net_interface.0.dns_name = 'scipion-wn-#N#' and
+disk.0.os.name='linux' and
+disk.0.image.url = 'ost://identity.cloud.muni.cz/68adf10c-a104-44e0-bc54-e518660ddbb3'
+)
+
+configure wn (
+@begin
+- vars:
+    slurm_front_end_ip: "{{ hostvars[ groups['front'][0]]['IM_NODE_PRIVATE_IP'] }}"
+  roles:
+  - role: indigo-dc.nfs
+    nfs_mode: 'client'
+    nfs_client_imports: [{ local: "/vol-project", remote: "/vol-project", server_host: "{{ slurm_front_end_ip }}" }]
+  - role: grycap.slurm
+    slurm_type_of_node: 'wn'
+    slurm_server_name: 'scipion-master'
+    slurm_server_ip: "{{ slurm_front_end_ip }}"
+    slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
+    slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+@end
+)
+
+configure front (
+@begin
+- vars:
+    vnode_prefix: scipion-wn-
+  roles:
+  - role: indigo-dc.nfs
+    nfs_mode: 'server'
+    nfs_exports: [{path: "/vol-project", export: "{{ vnode_prefix }}*.localdomain(fsid=0,rw,async,no_root_squash,no_subtree_check,insecure)"}]
+  - role: grycap.slurm
+    slurm_type_of_node: 'front'
+    slurm_server_name: 'scipion-master'
+    slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
+    slurm_vnode_prefix: "{{ vnode_prefix }}"
+    slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+  tasks:
+   - name: Pull docker images
+     shell: docker pull registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker-plugin-volume:latest && docker pull registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker:latest
+   - name: Create plugins volume
+     shell: docker volume create scipion-plugins && docker run --rm --mount src=scipion-plugins,dst=/volume registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker-plugin-volume:latest
+   - name: Run scipion docker
+     shell: docker run --privileged -d --rm -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 --mount src=scipion-plugins,dst=/opt/scipion/software/em registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker:latest
+@end
+)
+
+deploy front 1
+deploy wn 1
