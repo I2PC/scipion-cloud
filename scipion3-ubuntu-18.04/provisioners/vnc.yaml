@@ -1,0 +1,92 @@
+- hosts: all
+  become: true
+  tasks:
+  - name: install dependencies
+    apt:
+      name: [git, xfce4, mesa-utils]
+      state: latest
+
+  - name: install turbovnc package
+    apt:
+      deb: https://sourceforge.net/projects/turbovnc/files/2.2.5/turbovnc_2.2.5_amd64.deb
+
+  - name: Configure user in tvncserver
+    lineinfile:
+      path: /etc/sysconfig/tvncservers
+      line: 'VNCSERVERS="1:scipion"'
+
+  - name: Configure user args in tvncserver
+    lineinfile:
+      path: /etc/sysconfig/tvncservers
+      line: 'VNCSERVERARGS\[1\]="-geometry 800x600 -nohttpd"'
+
+  - name: Update tvncserver defaults
+    command: update-rc.d tvncserver defaults
+
+  - name: Create the .vnc directory
+    file:
+      path: /home/scipion/.vnc
+      owner: scipion
+      group: scipion
+      state: directory
+      mode: u+rwx
+
+  - name: Set vnc password for scipion user
+    become: yes
+    become_user: scipion
+    shell: echo $(tr -dc _A-H-J-N-P-Z-a-h-m-z-1-9 < /dev/urandom | head -c${1:-8}) | /opt/TurboVNC/bin/vncpasswd -f > /home/scipion/.vnc/passwd
+
+  - name: Change vnc passwd file permissions
+    file:
+      path: /home/scipion/.vnc/passwd
+      mode: 0600
+
+  - name: Create xstartup.turbovnc file
+    copy:
+      content:
+        "#!/bin/sh\n
+        unset SESSION_MANAGER\n
+        unset DBUS_SESSION_BUS_ADDRESS\n
+        startxfce4 &\n
+        exit 0"
+      dest: /home/scipion/.vnc/xstartup.turbovnc
+      owner: scipion
+      group: scipion
+      mode: 0755
+
+  - name: Disable remote-connections
+    lineinfile:
+      path: /etc/turbovncserver-security.conf
+      regexp: '#no-remote-connections'
+      line: 'no-remote-connections'
+
+  - name: Checkout noVNC
+    git:
+      repo: https://github.com/novnc/noVNC.git
+      dest: /opt/noVNC
+
+  - name: Checkout websockify
+    git:
+      repo: https://github.com/novnc/websockify
+      dest: /opt/noVNC/utils/websockify
+
+  - name: Create novnc service
+    copy:
+      content:
+        "[Unit]\n
+        Description=novnc.service\n
+        [Service]\n
+        ExecStart= /opt/noVNC/utils/websockify/run 8000 localhost:5901 --web /opt/noVNC\n
+        Restart=on-failure\n
+        [Install]\n
+        WantedBy=default.target"
+      dest: /etc/systemd/system/novnc.service
+
+  - name: Enable novnc service
+    systemd:
+      name: novnc
+      daemon_reload: yes
+      state: started
+      enabled: yes
+
+

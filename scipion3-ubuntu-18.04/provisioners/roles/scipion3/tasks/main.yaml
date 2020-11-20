@@ -1,0 +1,40 @@
+- name: install scipion3 dependencies
+  apt:
+    name: [gcc, g++, cmake, make, libopenmpi-dev, python3-tk, python-pip, libfftw3-dev, libhdf5-dev, libtiff-dev, libjpeg-dev, libsqlite3-dev, openjdk-8-jdk, python3-dev, virtualenv]
+    state: latest
+
+- name: add group "scipion"
+  group: name=scipion
+
+- name: add user "scipion"
+  user: name=scipion group=scipion home=/home/scipion createhome=yes shell=/bin/bash
+
+- name: Create the scipion3 directory
+  file: path=/home/scipion/scipion3 owner=scipion group=scipion state=directory
+
+- name: Install scipion3 installer
+  become: yes
+  become_user: scipion
+  command: python -m pip install --user scipion-installer
+
+- name: Install scipion3
+  become: yes
+  become_user: scipion
+  command: python -m scipioninstaller /home/scipion/scipion3 -venv -j 4
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/usr/local/cuda/bin"
+
+- name: Create scipion config file
+  become: yes
+  become_user: scipion
+  command: /home/scipion/scipion3/scipion3 config --notify
+
+- name: Install relion plugin
+  become: yes
+  become_user: scipion
+  command: /home/scipion/scipion3/scipion3 installp -p scipion-em-relion
+
+- name: Clean temporary files
+  become: yes
+  become_user: scipion
+  shell: rm -rf /tmp/scipion-deploy /home/scipion/scipion3/software/em/*gz
