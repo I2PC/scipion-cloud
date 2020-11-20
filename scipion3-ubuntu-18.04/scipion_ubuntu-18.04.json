@@ -18,7 +18,7 @@
         "initrd=initrd.gz ---",
         "<enter>"
       ],
-      "disk_size": 10000,
+      "disk_size": 12000,
       "format": "ova",
       "guest_os_type": "Ubuntu_64",
       "http_directory": "httpdir",
@@ -56,6 +56,21 @@
       "user": "root"
     },
     {
+      "playbook_file": "provisioners/scipion3.yaml",
+      "type": "ansible",
+      "user": "root"
+    },
+        {
+      "playbook_file": "provisioners/vnc.yaml",
+      "type": "ansible",
+      "user": "root"
+    },
+    {
+      "playbook_file": "provisioners/no-gpu.yaml",
+      "type": "ansible",
+      "user": "scipion"
+    },
+        {
       "pause_before": "30s",
       "playbook_file": "provisioners/base.yaml",
       "type": "ansible",
