@@ -1,0 +1,69 @@
+---
+- name: remove udev rules
+  file:
+    path: /etc/udev/rules.d/75-persistent-net-generator.rules
+    state: absent
+
+- name: List of ssh keys of machine
+  find:
+    paths: "/etc/ssh/"
+    patterns: "ssh_host_*"
+  register: ssh_host_keys
+
+- debug:
+    var: item.path
+  with_items: "{{ ssh_host_keys.files }}"
+
+- name: remote ssh keys
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items: "{{ ssh_host_keys.files }}"
+
+- name: disable root login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin.*'
+    line: 'PermitRootLogin no'
+
+- name: disable pasword authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#\?PasswordAuthentication.*'
+    line: 'PasswordAuthentication no'
+
+- name: lock root password
+  command: passwd -l root
+
+- name: remove unneeded files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /root/.bash_history
+    - /root/VBoxGuestAdditions.iso
+
+- name: apt-get clean
+  apt:
+    autoremove: yes
+    autoclean: yes
+
+- name: further removing unneeded files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/var/lib/apt/lists/"
+    - "/var/log/installer/"
+    - "/var/lib/cloud/"
+
+- name: remove locales
+  command: locale-gen --purge en_GB.utf8
+
+- name: clean log files
+  command:  find /var/log/ -type f -exec cp /dev/null {} \;
+
+- name: fill disk with zeros
+  shell: |
+    dd if=/dev/zero of=/bigemptyfile bs=4096k || echo "full disk"
+    rm -rf /bigemptyfile
