@@ -3,12 +3,6 @@
     name: [gcc, g++, cmake, make, libopenmpi-dev, python3-tk, python-pip, libfftw3-dev, libhdf5-dev, libtiff-dev, libjpeg-dev, libsqlite3-dev, openjdk-8-jdk, python3-dev, virtualenv]
     state: latest
 
-- name: add group "scipion"
-  group: name=scipion
-
-- name: add user "scipion"
-  user: name=scipion group=scipion home=/home/scipion createhome=yes shell=/bin/bash
-
 - name: Create the scipion3 directory
   file: path=/home/scipion/scipion3 owner=scipion group=scipion state=directory
 
