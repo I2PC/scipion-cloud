@@ -2,13 +2,14 @@ network publica (outbound = 'yes' and outports='5904')
 network privada ()
 
 system front (
-instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
-#instance_type = 'standard.large' and
+#instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
+instance_type = 'standard.medium' and
 net_interface.1.connection = 'publica' and
 net_interface.0.connection = 'privada' and
 net_interface.0.dns_name = 'scipion-master' and
 disk.0.os.name='linux' and
-disk.0.image.url = 'ost://identity.cloud.muni.cz/e3068d5a-7281-438e-afa3-acaa0db907fc' and
+#disk.0.image.url = 'ost://identity.cloud.muni.cz/e8d75fc1-ac32-4851-90b5-b4c925e9e6f8' and 
+disk.0.image.url = 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601' and
 disk.0.applications contains (name='ansible.modules.grycap.slurm') and
 disk.0.applications contains (name='ansible.modules.indigo-dc.nfs') and
 
@@ -21,11 +22,12 @@ disk.1.mount_path='/vol-project'
 
 system wn (
 #instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
-instance_type = 'standard.large' and
+instance_type = 'standard.medium' and
 net_interface.0.connection = 'privada' and
 net_interface.0.dns_name = 'scipion-wn-#N#' and
 disk.0.os.name='linux' and
-disk.0.image.url = 'ost://identity.cloud.muni.cz/68adf10c-a104-44e0-bc54-e518660ddbb3'
+#disk.0.image.url = 'ost://identity.cloud.muni.cz/e8d75fc1-ac32-4851-90b5-b4c925e9e6f8'
+disk.0.image.url = 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601'
 )
 
 configure wn (
@@ -59,13 +61,6 @@ configure front (
     slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
     slurm_vnode_prefix: "{{ vnode_prefix }}"
     slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
-  tasks:
-   - name: Pull docker images
-     shell: docker pull registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker-plugin-volume:latest && docker pull registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker:latest
-   - name: Create plugins volume
-     shell: docker volume create scipion-plugins && docker run --rm --mount src=scipion-plugins,dst=/volume registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker-plugin-volume:latest
-   - name: Run scipion docker
-     shell: docker run --privileged -d --rm -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 --mount src=scipion-plugins,dst=/opt/scipion/software/em registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker:latest
 @end
 )
 
