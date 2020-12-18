@@ -26,7 +26,6 @@ instance_type = 'standard.medium' and
 net_interface.0.connection = 'privada' and
 net_interface.0.dns_name = 'scipion-wn-#N#' and
 disk.0.os.name='linux' and
-#disk.0.image.url = 'ost://identity.cloud.muni.cz/e8d75fc1-ac32-4851-90b5-b4c925e9e6f8'
 disk.0.image.url = 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601'
 )
 
@@ -34,6 +33,21 @@ configure wn (
 @begin
 - vars:
     slurm_front_end_ip: "{{ hostvars[ groups['front'][0]]['IM_NODE_PRIVATE_IP'] }}"
+    docker_runtime: |
+      {
+        "mtu": 1442
+      }
+    docker_runtime_nvidia: |
+      {
+        "mtu": 1442,
+        "runtimes": {
+          "nvidia": {
+            "path": "/usr/bin/nvidia-container-runtime",
+            "runtimeArgs": []
+          }
+        },
+        "default-runtime": "nvidia"
+      }
   roles:
   - role: indigo-dc.nfs
     nfs_mode: 'client'
@@ -44,6 +58,97 @@ configure wn (
     slurm_server_ip: "{{ slurm_front_end_ip }}"
     slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
     slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+    
+# Put here your Ansible recipes to configure the nodes  
+
+  tasks:
+  - name: Add NVIDIA PPA
+    apt_repository:
+      repo: ppa:graphics-drivers/ppa
+      update_cache: yes    
+
+  - name: Install nvidia-driver package
+    apt: name=nvidia-driver-440
+    
+  - name: Install required packages
+    apt:
+      name: ['xdm', 'curl', 'wget', 'git', 'htop', 'python-pip', 'apt-transport-https', 'ca-certificates', 'gnupg-agent', 'software-properties-common', 'xserver-xorg', 'pkg-config']
+      state: present
+      update_cache: yes
+
+  - name: Add docker GPG key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+  - name: Get release name
+    shell: lsb_release -cs
+    register: release_name
+  - name: Add docker registry
+    apt_repository: repo='deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ release_name.stdout }} stable' state=present
+
+  - name: Install docker
+    package:
+      name: ['docker-ce', 'docker-ce-cli', 'containerd.io']
+      state: present
+
+  - name: Install pip docker
+    pip:
+      name: docker
+      
+  - name: Test GPU support
+    command: nvidia-smi
+    register: gpu_support
+    ignore_errors: yes
+
+  - name: Add user to docker group and change shell
+    shell: usermod --shell /bin/bash -aG docker cloudadm
+    
+  - name: Set mtu value to docker network
+    copy:
+      content: "{{ docker_runtime }}"
+      dest: /etc/docker/daemon.json
+
+  - name: Start docker service
+    service:
+      name: docker
+      state: restarted
+
+  - name: Get release name
+    shell: . /etc/os-release;echo $ID$VERSION_ID
+    register: distribution
+
+  - name: All gpu dependent tasks
+    block:
+    - name: Add nvidia docker runtime source
+      shell: 'curl -s -L https://nvidia.github.io/nvidia-docker/{{ distribution.stdout }}/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list'
+      
+    - name: Add nvidia docker runtime GPG 1/2
+      apt_key:
+        url: https://nvidia.github.io/nvidia-docker/gpgkey
+        state: present
+        
+    - name: Add nvidia docker runtime GPG 2/2
+      apt_key:
+        url: https://nvidia.github.io/nvidia-container-runtime/gpgkey
+        state: present
+        
+    - name: Install nvidia-container-toolkit and nvidia-container-runtime
+      apt:
+        name: ['nvidia-container-toolkit', 'nvidia-container-runtime']
+        update_cache: yes
+                
+    - name: Set nvidia as default docker runtime
+      copy:
+        content: "{{ docker_runtime_nvidia }}"
+        dest: /etc/docker/daemon.json
+        
+    - name: Restart docker
+      service:
+        name: docker
+        state: restarted
+        
+    when: gpu_support is success
+    
 @end
 )
 
@@ -51,6 +156,12 @@ configure front (
 @begin
 - vars:
     vnode_prefix: scipion-wn-
+
+    docker_runtime: |
+      {
+        "mtu": 1442
+      }
+    
   roles:
   - role: indigo-dc.nfs
     nfs_mode: 'server'
@@ -61,6 +172,56 @@ configure front (
     slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
     slurm_vnode_prefix: "{{ vnode_prefix }}"
     slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+
+# Put here your Ansible recipes to configure the nodes  
+
+  tasks:
+      
+  - name: Install required packages
+    apt:
+      name: ['xdm', 'curl', 'wget', 'git', 'htop', 'python-pip', 'apt-transport-https', 'ca-certificates', 'gnupg-agent', 'software-properties-common', 'xserver-xorg', 'pkg-config']
+      state: present
+      update_cache: yes
+
+  - name: Add docker GPG key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+  - name: Get release name
+    shell: lsb_release -cs
+    register: release_name
+  - name: Add docker registry
+    apt_repository: repo='deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ release_name.stdout }} stable' state=present
+
+  - name: Install docker
+    package:
+      name: ['docker-ce', 'docker-ce-cli', 'containerd.io']
+      state: present
+
+  - name: Install pip docker
+    pip:
+      name: docker
+      
+ 
+  - name: Add user to docker group and change shell
+    shell: usermod --shell /bin/bash -aG docker cloudadm
+    
+  - name: Set mtu value to docker network
+    copy:
+      content: "{{ docker_runtime }}"
+      dest: /etc/docker/daemon.json
+
+  - name: Start docker service
+    service:
+      name: docker
+      state: restarted
+
+  - name: Get release name
+    shell: . /etc/os-release;echo $ID$VERSION_ID
+    register: distribution
+
+  - name: Run Scipion master container
+    shell: docker run -d --name=scipionmaster --privileged -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v /vol-project:/home/scipionuser/ScipionUserData registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
 @end
 )
 
