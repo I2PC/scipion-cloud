@@ -58,6 +58,7 @@ configure wn (
     slurm_server_ip: "{{ slurm_front_end_ip }}"
     slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
     slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+    slurm_user_id: 1052
     
 # Put here your Ansible recipes to configure the nodes  
 
@@ -172,6 +173,7 @@ configure front (
     slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
     slurm_vnode_prefix: "{{ vnode_prefix }}"
     slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+    slurm_user_id: 1052
 
 # Put here your Ansible recipes to configure the nodes  
 
