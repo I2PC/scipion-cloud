@@ -66,7 +66,7 @@ topology_template:
         interfaces:
           Standard:
             configure:
-              implementation: https://gitlab.ics.muni.cz/eosc-synergy/scipion-docker/-/raw/dev/ansible.yaml
+              implementation: https://raw.githubusercontent.com/I2PC/scipion-cloud/devel/IM/IM-ansible-master.yaml
               inputs:
                 vnc_pass: { get_input: vnc_pass }
 
@@ -88,6 +88,11 @@ topology_template:
               properties:
                 image: 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601'
                 type: linux
+
+        interfaces:
+          Standard:
+            configure:
+              implementation: https://raw.githubusercontent.com/I2PC/scipion-cloud/devel/IM/IM-ansible-worker.yaml
 
     my_block_storage:
       type: BlockStorage
