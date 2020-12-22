@@ -38,6 +38,8 @@
       path: /home/scipion/Desktop
       state: directory
       mode: 0755
+    owner: scipion
+    group: scipion
 
   - name: create scipion desktop shortcut
     copy:
