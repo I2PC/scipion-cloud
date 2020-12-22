@@ -5,9 +5,9 @@ imports:
   - indigo_custom_types: https://raw.githubusercontent.com/indigo-dc/tosca-types/master/custom_types.yaml
 
 description: >
-  Launch a master node with Scipion via VNC
+  Launch a cluster with Scipion via VNC
 metadata:
-  display_name: TEST - Scipion on SLURM cluster
+  display_name: Scipion on SLURM cluster
 
 topology_template:
   inputs:
@@ -48,10 +48,10 @@ topology_template:
                   source: 5904
           host:
             properties:
-              instance_type: 'hpc.8core-64ram-nvidia-1080-glados'
+              instance_type: 'standard.medium'
           os:
             properties:
-              image: 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601'
+              image: 'ost://identity.cloud.muni.cz/bb3e9951-5a39-4f5a-8b5c-2e3b9d5f8413'
               type: linux
 
         requirements:
@@ -86,7 +86,7 @@ topology_template:
               instance_type: 'hpc.8core-64ram-nvidia-1080-glados'
             os:
               properties:
-                image: 'ost://identity.cloud.muni.cz/6e60eb4a-aeae-400a-927c-e3643d827601'
+                image: 'ost://identity.cloud.muni.cz/be5483c3-08fa-452a-9155-7c25fdcb3ac8'
                 type: linux
 
         interfaces:
