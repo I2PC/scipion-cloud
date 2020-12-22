@@ -1,7 +1,6 @@
 tosca_definitions_version: tosca_simple_yaml_1_0
 
 imports:
-  - ec3_custom_types: https://raw.githubusercontent.com/grycap/ec3/tosca/tosca/custom_types.yaml
   - indigo_custom_types: https://raw.githubusercontent.com/indigo-dc/tosca-types/master/custom_types.yaml
 
 description: >
@@ -15,14 +14,17 @@ topology_template:
       type: string
       description: VNC password
       required: yes
+      default: ScipionCloud
     description:
       type: string
       description: Description
       required: yes
+      default: Scipion cluster deployment
     project_local_location:
       type: string
       description: Local path where existing Scipion project exists
       required: no
+      default: /project_location
 
   node_templates:
 
@@ -33,66 +35,75 @@ topology_template:
       requirements:
         - host: lrms_server
 
-      lrms_server:
-        type: tosca.nodes.indigo.Compute
-        capabilities:
-          endpoint:
-            properties:
-              network_name: PUBLIC
-              ports:
-                ssh_port:
-                  protocol: tcp
-                  source: 22
-                vnc_port:
-                  protocol: tcp
-                  source: 5904
-          host:
-            properties:
-              instance_type: 'standard.medium'
-          os:
-            properties:
-              image: 'ost://identity.cloud.muni.cz/bb3e9951-5a39-4f5a-8b5c-2e3b9d5f8413'
-              type: linux
+    lrms_server:
+      type: tosca.nodes.indigo.Compute
+      capabilities:
+        endpoint:
+          properties:
+            network_name: PUBLIC
+            ports:
+              ssh_port:
+                protocol: tcp
+                source: 22
+              vnc_port:
+                protocol: tcp
+                source: 5904
+        host:
+          properties:
+            instance_type: 'standard.medium'
+        os:
+          properties:
+            image: 'ost://identity.cloud.muni.cz/bb3e9951-5a39-4f5a-8b5c-2e3b9d5f8413'
+            type: linux
 
-        requirements:
-          - local_storage:
-              node: my_block_storage
-              relationship:
-                type: AttachesTo
-                properties:
-                  location: /vol-project
-                  device: vdb
-
-        interfaces:
-          Standard:
-            configure:
-              implementation: https://raw.githubusercontent.com/I2PC/scipion-cloud/devel/IM/IM-ansible-master.yaml
-              inputs:
-                vnc_pass: { get_input: vnc_pass }
-
-      wn_node:
-        type: tosca.nodes.indigo.LRMS.WorkerNode.Slurm
-        properties:
-          front_end_ip: { get_attribute: [ lrms_server, private_address, 0 ] }
-          public_front_end_ip: { get_attribute: [ lrms_server, public_address, 0 ] }
-        requirements:
-          - host: lrms_wn
-
-      lrms_wn:
-        type: tosca.nodes.indigo.Compute
-        capabilities:
-          host:
-            properties:
-              instance_type: 'hpc.8core-64ram-nvidia-1080-glados'
-            os:
+      requirements:
+        - local_storage:
+            node: my_block_storage
+            relationship:
+              type: AttachesTo
               properties:
-                image: 'ost://identity.cloud.muni.cz/be5483c3-08fa-452a-9155-7c25fdcb3ac8'
-                type: linux
+                location: /vol-project
+                device: vdb
 
-        interfaces:
-          Standard:
-            configure:
-              implementation: https://raw.githubusercontent.com/I2PC/scipion-cloud/devel/IM/IM-ansible-worker.yaml
+    scipion_master:
+      type: tosca.nodes.SoftwareComponent
+      requirements:
+        - host: lrms_server
+        - dependency: lrms_front_end
+      interfaces:
+        Standard:
+          configure:
+            implementation: https://raw.githubusercontent.com/I2PC/scipion-cloud/devel/IM/IM-ansible-master.yaml
+            inputs:
+              vnc_pass: { get_input: vnc_pass }
+
+    wn_node:
+      type: tosca.nodes.indigo.LRMS.WorkerNode.Slurm
+      properties:
+        front_end_ip: { get_attribute: [ lrms_server, private_address, 0 ] }
+        public_front_end_ip: { get_attribute: [ lrms_server, public_address, 0 ] }
+      requirements:
+        - host: lrms_wn
+
+    lrms_wn:
+      type: tosca.nodes.indigo.Compute
+      capabilities:
+        host:
+          properties:
+            instance_type: 'standard.medium'
+        os:
+          properties:
+            image: 'ost://identity.cloud.muni.cz/bb3e9951-5a39-4f5a-8b5c-2e3b9d5f8413'
+
+    scipion_wn:
+      type: tosca.nodes.SoftwareComponent
+      requirements:
+        - host: lrms_wn
+        - dependency: wn_node
+      interfaces:
+        Standard:
+          configure:
+            implementation: https://raw.githubusercontent.com/I2PC/scipion-cloud/devel/IM/IM-ansible-worker.yaml
 
     my_block_storage:
       type: BlockStorage
