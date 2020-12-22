@@ -101,9 +101,6 @@ configure wn (
     register: gpu_support
     ignore_errors: yes
 
-  - name: Add user to docker group and change shell
-    shell: usermod --shell /bin/bash -aG docker cloudadm
-    
   - name: Set mtu value to docker network
     copy:
       content: "{{ docker_runtime }}"
@@ -117,6 +114,22 @@ configure wn (
   - name: Get release name
     shell: . /etc/os-release;echo $ID$VERSION_ID
     register: distribution
+
+  - name: Create scipionuser group
+    group:
+      name: scipionuser
+      gid: 1042
+      state: present
+
+  - name: Create scipionuser user
+    user:
+      name: scipionuser
+      uid: 1042
+      shell: /bin/bash
+      group: scipionuser
+
+  - name: Add scipionuser to docker group and change shell
+    shell: usermod --shell /bin/bash -aG docker scipionuser
 
   - name: All gpu dependent tasks
     block:
@@ -173,6 +186,8 @@ configure front (
     slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
     slurm_vnode_prefix: "{{ vnode_prefix }}"
     slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+    slurm_wn_mem: 2048
+    slurm_wn_cpus: 2
     slurm_user_id: 1052
 
 # Put here your Ansible recipes to configure the nodes  
@@ -203,11 +218,7 @@ configure front (
   - name: Install pip docker
     pip:
       name: docker
-      
- 
-  - name: Add user to docker group and change shell
-    shell: usermod --shell /bin/bash -aG docker cloudadm
-    
+
   - name: Set mtu value to docker network
     copy:
       content: "{{ docker_runtime }}"
@@ -222,8 +233,24 @@ configure front (
     shell: . /etc/os-release;echo $ID$VERSION_ID
     register: distribution
 
+  - name: Create scipionuser group
+    group:
+      name: scipionuser
+      gid: 1042
+      state: present
+
+  - name: Create scipionuser user
+    user:
+      name: scipionuser
+      uid: 1042
+      shell: /bin/bash
+      group: scipionuser
+
+  - name: Add scipionuser to docker group and change shell
+    shell: usermod --shell /bin/bash -aG docker scipionuser
+
   - name: Run Scipion master container
-    shell: docker run -d --name=scipionmaster --privileged -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v /vol-project:/home/scipionuser/ScipionUserData registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
+    shell: docker run -d --name=scipionmaster --privileged -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v /vol-project:/home/scipionuser/ScipionUserData -v /usr/local/etc/slurm.conf:/usr/local/etc/slurm.conf --add-host scipion-master: registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
 @end
 )
 

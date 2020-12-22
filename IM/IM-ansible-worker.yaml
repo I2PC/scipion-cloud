@@ -1,0 +1,24 @@
+- vars:
+    slurm_front_end_ip: "{{ hostvars[ groups['front'][0]]['IM_NODE_PRIVATE_IP'] }}"
+
+  tasks:
+  - name: Create simlink ScipionUserData to shared disk
+    file:
+      src: /vol-project
+      dest: /home/scipion/ScipionUserData
+      owner: scipion
+      group: scipion
+      state: link
+
+  - name: Add nolock option to fstab (nfs_only_v4 to true does not seem to work)
+    replace:
+      path: /etc/fstab
+      regexp: defaults
+      replace: defaults,nolock
+      backup: yes
+
+  - name: Unmount volume
+    command: umount /vol-project
+
+  - name: Mount volume
+    command: mount -a

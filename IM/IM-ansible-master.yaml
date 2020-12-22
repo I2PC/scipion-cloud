@@ -1,0 +1,28 @@
+- vars:
+    vnode_prefix: scipion-wn-
+
+  tasks:
+  - name: Set vnc password
+    shell: echo "{{ vnc_pass }}" | /opt/TurboVNC/bin/vncpasswd -f > /home/scipion/.vnc/passwd
+    become: yes
+    become_user: scipion
+
+  - name: Download scipion hosts.conf file
+    get_url:
+      url: http://scipion.cnb.csic.es/downloads/vm/hosts.conf
+      dest: /home/scipion/scipion3/config/hosts.conf
+      owner: scipion
+
+  - name: Change exported volume ownership
+    file:
+      path: /vol-project
+      owner: scipion
+      group: scipion
+
+  - name: Create simlink ScipionUserData to shared disk
+    file:
+      src: /vol-project
+      dest: /home/scipion/ScipionUserData
+      owner: scipion
+      group: scipion
+      state: link

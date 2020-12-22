@@ -1,0 +1,125 @@
+network publica (outbound = 'yes' and outports='8000')
+network privada ()
+
+system front (
+#instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
+instance_type = 'standard.medium' and
+net_interface.1.connection = 'publica' and
+net_interface.0.connection = 'privada' and
+net_interface.0.dns_name = 'scipion-master' and
+disk.0.os.name='linux' and
+#disk.0.image.url = 'ost://identity.cloud.muni.cz/be5483c3-08fa-452a-9155-7c25fdcb3ac8' and
+disk.0.image.url = 'ost://identity.cloud.muni.cz/bb3e9951-5a39-4f5a-8b5c-2e3b9d5f8413' and
+disk.0.applications contains (name='ansible.modules.grycap.slurm') and
+disk.0.applications contains (name='ansible.modules.indigo-dc.nfs') and
+
+# This lines add an extra 10 GB disk, format it and the mount at /vol-project
+disk.1.size=10GB and
+disk.1.device='vdb' and
+disk.1.fstype='ext4' and
+disk.1.mount_path='/vol-project'
+)
+
+system wn (
+#instance_type = 'hpc.8core-64ram-nvidia-1080-glados' and
+instance_type = 'standard.medium' and
+net_interface.0.connection = 'privada' and
+net_interface.0.dns_name = 'scipion-wn-#N#' and
+disk.0.os.name='linux' and
+#disk.0.image.url = 'ost://identity.cloud.muni.cz/be5483c3-08fa-452a-9155-7c25fdcb3ac8'
+disk.0.image.url = 'ost://identity.cloud.muni.cz/bb3e9951-5a39-4f5a-8b5c-2e3b9d5f8413'
+)
+
+configure wn (
+@begin
+- vars:
+    slurm_front_end_ip: "{{ hostvars[ groups['front'][0]]['IM_NODE_PRIVATE_IP'] }}"
+
+  tasks:
+  - name: Create simlink ScipionUserData to shared disk
+    file:
+      src: /vol-project
+      dest: /home/scipion/ScipionUserData
+      owner: scipion
+      group: scipion
+      state: link
+
+
+  - name: Add nolock option to fstab (nfs_only_v4 to true does not seem to work)
+    replace:
+      path: /etc/fstab
+      regexp: defaults
+      replace: defaults,nolock
+      backup: yes
+
+  - name: Unmount volume
+    command: umount /vol-project
+
+  - name: Mount volume
+    command: mount -a
+
+  roles:
+  - role: indigo-dc.nfs
+    nfs_mode: 'client'
+    #nfs_only_v4: true
+    nfs_client_imports: [{ local: "/vol-project", remote: "/vol-project", server_host: "{{ slurm_front_end_ip }}" }]
+  - role: grycap.slurm
+    slurm_type_of_node: 'wn'
+    slurm_server_name: 'scipion-master'
+    slurm_server_ip: "{{ slurm_front_end_ip }}"
+    slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
+    slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+
+@end
+)
+
+configure front (
+@begin
+- vars:
+    vnode_prefix: scipion-wn-
+
+  tasks:
+  - name: Set vnc password
+    shell: echo @input.VNCpassword@ | /opt/TurboVNC/bin/vncpasswd -f > /home/scipion/.vnc/passwd
+    become: yes
+    become_user: scipion
+
+  - name: Download scipion hosts.conf file
+    get_url:
+      url: http://scipion.cnb.csic.es/downloads/vm/hosts.conf
+      dest: /home/scipion/scipion3/config/hosts.conf
+      owner: scipion
+
+  - name: Change exported volume ownership
+    file:
+      path: /vol-project
+      owner: scipion
+      group: scipion
+
+  - name: Create simlink ScipionUserData to shared disk
+    file:
+      src: /vol-project
+      dest: /home/scipion/ScipionUserData
+      owner: scipion
+      group: scipion
+      state: link
+
+  roles:
+  - role: indigo-dc.nfs
+    nfs_mode: 'server'
+    #nfs_only_v4: true
+    nfs_exports: [{path: "/vol-project", export: "{{ vnode_prefix }}*.localdomain(fsid=0,rw,async,no_root_squash,no_subtree_check,insecure)"}]
+  - role: grycap.slurm
+    slurm_type_of_node: 'front'
+    slurm_server_name: 'scipion-master'
+    slurm_wn_ips: '{{ groups["wn"]|map("extract", hostvars, "ansible_default_ipv4.address")|list if "wn" in groups else [] }}'
+    slurm_vnode_prefix: "{{ vnode_prefix }}"
+    slurm_wn_nodenames: '{{ groups["wn"]|map("extract", hostvars, "ansible_hostname")|list if "wn" in groups else [] }}'
+    slurm_wn_mem: 2048
+    slurm_wn_cpus: 2
+
+@end
+)
+
+deploy front 1
+deploy wn 1
