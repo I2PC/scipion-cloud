@@ -149,7 +149,22 @@ configure node (
     when: gpu_support is success
     
   - name: Run Scipion master container
-    shell: docker run -d --name=scipionmaster --privileged -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
+    #shell: docker run -d --name=scipionmaster --privileged -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
+    docker_container:
+      name: scipionmaster
+      image: registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
+      privileged: yes
+      published_ports:
+        - 5904:5904
+      env:
+        USE_DISPLAY: 4
+        ROOT_PASS: abc
+        USER_PASS: abc
+      volumes:
+        - /tmp/.X11-unix/X0:/tmp/.X11-unix/X0
+      etc_hosts:
+        -
+
 @end
 )
 
