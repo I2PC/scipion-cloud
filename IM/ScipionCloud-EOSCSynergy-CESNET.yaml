@@ -35,11 +35,11 @@ configure node (
   - name: Add NVIDIA PPA
     apt_repository:
       repo: ppa:graphics-drivers/ppa
-      update_cache: yes    
+      update_cache: yes
 
   - name: Install nvidia-driver package
     apt: name=nvidia-driver-440
-    
+
   - name: Install required packages
     apt:
       name: ['xdm', 'curl', 'wget', 'git', 'htop', 'python-pip', 'apt-transport-https', 'ca-certificates', 'gnupg-agent', 'software-properties-common', 'xserver-xorg', 'pkg-config']
@@ -64,7 +64,7 @@ configure node (
   - name: Install pip docker
     pip:
       name: docker
-      
+
   - name: Test GPU support
     command: nvidia-smi
     register: gpu_support
@@ -72,7 +72,7 @@ configure node (
 
   - name: Add user to docker group and change shell
     shell: usermod --shell /bin/bash -aG docker cloudadm
-    
+
   - name: Set mtu value to docker network
     copy:
       content: "{{ docker_runtime }}"
@@ -91,63 +91,63 @@ configure node (
     block:
     - name: Add nvidia docker runtime source
       shell: 'curl -s -L https://nvidia.github.io/nvidia-docker/{{ distribution.stdout }}/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list'
-      
+
     - name: Add nvidia docker runtime GPG 1/2
       apt_key:
         url: https://nvidia.github.io/nvidia-docker/gpgkey
         state: present
-        
+
     - name: Add nvidia docker runtime GPG 2/2
       apt_key:
         url: https://nvidia.github.io/nvidia-container-runtime/gpgkey
         state: present
-        
+
     - name: Install nvidia-container-toolkit and nvidia-container-runtime
       apt:
         name: ['nvidia-container-toolkit', 'nvidia-container-runtime']
         update_cache: yes
-        
+
     - name: Get GPU PCI port
       shell: nvidia-xconfig --query-gpu-info | grep 'PCI BusID' | cut -f2- -d':' | cut -f2- -d' '
       register: gpu_pci_port
-      
+
     - name: Create xorg.conf
       shell: nvidia-xconfig -a --allow-empty-initial-configuration --use-display-device=None --virtual=1920x1080 --busid {{ gpu_pci_port.stdout }}
-      
+
     - name: Add HardDPMS to xorg.conf
       lineinfile:
         path: /etc/X11/xorg.conf
         insertafter: '\s+Option\s+\"AllowEmptyInitialConfiguration\"\s+\"True\"'
         line: '    Option         "HardDPMS" "false"'
-        
+
     - name: Disable authorization for xdm
       lineinfile:
         path: /etc/X11/xdm/xdm-config
         regexp: 'DisplayManager\*authorize:\s+true'
         line: 'DisplayManager*authorize: false'
-        
+
     - name: Set nvidia as default docker runtime
       copy:
         content: "{{ docker_runtime_nvidia }}"
         dest: /etc/docker/daemon.json
-        
+
     - name: Remove ".X11-unix" dir to prevent xorg issues
       file:
         path: /tmp/.X11-unix
         state: absent
-        
+
     - name: Restart display-manager
       service:
         name: display-manager
         state: restarted
-        
+
     - name: Restart docker
       service:
         name: docker
         state: restarted
-        
+
     when: gpu_support is success
-    
+
   - name: Run Scipion master container
     #shell: docker run -d --name=scipionmaster --privileged -p 5904:5904 -e USE_DISPLAY="4" -e ROOT_PASS="abc" -e USER_PASS="abc" -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 registry.gitlab.ics.muni.cz:443/eosc-synergy/scipion-docker/master-image:dev
     docker_container:
@@ -157,13 +157,12 @@ configure node (
       published_ports:
         - 5904:5904
       env:
-        USE_DISPLAY: 4
-        ROOT_PASS: abc
-        USER_PASS: abc
+        USE_DISPLAY: "4"
+        ROOT_PASS: "abc"
+        USER_PASS: "abc"
       volumes:
         - /tmp/.X11-unix/X0:/tmp/.X11-unix/X0
-      etc_hosts:
-        -
+      #etc_hosts: { hostvars[groups["node"][0]]["IM_NODE_PRIVATE_IP"] }}
 
 @end
 )
