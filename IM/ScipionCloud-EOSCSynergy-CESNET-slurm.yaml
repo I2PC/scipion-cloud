@@ -49,7 +49,7 @@ configure wn (
         "default-runtime": "nvidia"
       }
 
-  pre-tasks:
+  pre_tasks:
   - name: Create scipionuser group
     group:
       name: scipionuser
@@ -179,7 +179,7 @@ configure front (
         "mtu": 1442
       }
 
-  pre-tasks:
+  pre_tasks:
   - name: Create scipionuser group
     group:
       name: scipionuser
